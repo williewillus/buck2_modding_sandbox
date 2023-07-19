@@ -6,5 +6,6 @@ MinecraftInfo = provider(
         "server_jar",  # artifact
         "server_mappings",  # artifact
         "asset_index",  # artifact
+        "libraries_dir",  # artifact
     ]
 )

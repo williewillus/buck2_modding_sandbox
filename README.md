@@ -72,7 +72,10 @@ This is an experimental project, so we're going to take some shortcuts:
 * No multiloader or mojmap/parchment support
 * Ok to vendor or manually write out dependencies instead of parsing maven POM's
 
-- [ ] Library downloading
+- [x] version manifest and version json parsing
+- [x] asset downloading
+  - ish, buck2 seems to open tons of fd's which can make the download flaky
+- [x] Library downloading
 - [ ] Client/server jar merge
 - [ ] Remap to intermediary
 - [ ] Remap to named

@@ -1,5 +1,15 @@
 load("//minecraft_info.bzl", "MinecraftInfo")
 
+def _library_rules_match(rules):
+    for rule in rules:
+        # Assert action is always "allow"? That's the only thing appearing in the json
+        os_name = rule["os"]["name"]
+        # FIXME: Non-linux platform support
+        if os_name != "linux":
+            return False
+    return True
+
+
 def _minecraft_version_impl(ctx: "context") -> ["provider"]:
     # Convert from dependency to artifact
     # TODO: Should this assert only one output?
@@ -26,12 +36,13 @@ def _minecraft_version_impl(ctx: "context") -> ["provider"]:
         f=derive_version_json
     )
 
-    # Crawl version json and get the asset index, jars, and mappings
+    # Crawl version json and get the asset index, jars, mappings, and libs
     asset_index_artifact = ctx.actions.declare_output("asset_index.json")
     client_jar_artifact = ctx.actions.declare_output("client.jar")
     client_mappings_artifact = ctx.actions.declare_output("client.txt")
     server_jar_artifact = ctx.actions.declare_output("server.jar")
     server_mappings_artifact = ctx.actions.declare_output("server.txt")
+    libraries_dir_artifact = ctx.actions.declare_output("libraries", dir = True)
     
     def derive_version_json_contents(ctx: "context", dynamic_artifacts, outputs):
         version_json = dynamic_artifacts[version_json_artifact].read_json()
@@ -60,6 +71,17 @@ def _minecraft_version_impl(ctx: "context") -> ["provider"]:
             version_json["downloads"]["server_mappings"]["url"],
             sha1=version_json["downloads"]["server_mappings"]["sha1"],
         )
+        libraries = {}
+        for library in version_json["libraries"]:
+            if not _library_rules_match(library.get("rules", [])):
+                continue
+            lib_name = library["downloads"]["artifact"]["path"]
+            libraries[lib_name] = ctx.actions.download_file(
+                lib_name,
+                library["downloads"]["artifact"]["url"],
+                sha1=library["downloads"]["artifact"]["sha1"],
+            )
+        ctx.actions.symlinked_dir(outputs[libraries_dir_artifact].as_output(), libraries)
     ctx.actions.dynamic_output(
         dynamic=[version_json_artifact],
         inputs=[],
@@ -69,6 +91,7 @@ def _minecraft_version_impl(ctx: "context") -> ["provider"]:
             server_jar_artifact,
             server_mappings_artifact,
             asset_index_artifact,
+            libraries_dir_artifact,
         ],
         f=derive_version_json_contents,
     )
@@ -79,6 +102,7 @@ def _minecraft_version_impl(ctx: "context") -> ["provider"]:
                 "client_mappings":  [DefaultInfo(default_output=client_mappings_artifact)],
                 "server_mappings":  [DefaultInfo(default_output=server_mappings_artifact)],
                 "asset_index":  [DefaultInfo(default_output=asset_index_artifact)],
+                "libraries": [DefaultInfo(default_output=libraries_dir_artifact)],
             },
         ),
         MinecraftInfo(
@@ -88,6 +112,7 @@ def _minecraft_version_impl(ctx: "context") -> ["provider"]:
             server_jar=server_jar_artifact,
             server_mappings=server_mappings_artifact,
             asset_index=asset_index_artifact,
+            libraries_dir=libraries_dir_artifact,
         ),
     ]
 
