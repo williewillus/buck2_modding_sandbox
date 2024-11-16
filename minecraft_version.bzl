@@ -10,7 +10,7 @@ def _library_rules_match(rules):
     return True
 
 
-def _minecraft_version_impl(ctx: "context") -> ["provider"]:
+def _minecraft_version_impl(ctx: AnalysisContext) -> list[Provider]:
     # Convert from dependency to artifact
     # TODO: Should this assert only one output?
     version_manifest = ctx.attrs.version_manifest[DefaultInfo].default_outputs[0]
@@ -18,7 +18,7 @@ def _minecraft_version_impl(ctx: "context") -> ["provider"]:
 
     # Get version json
     version_json_artifact = ctx.actions.declare_output(requested_version + ".json")
-    def derive_version_json(ctx: "context", dynamic_artifacts, outputs):
+    def derive_version_json(ctx: AnalysisContext, dynamic_artifacts, outputs):
         # Read the version manifest and download the version.json we desired
         manifest_json = dynamic_artifacts[version_manifest].read_json()
         for version in manifest_json["versions"]:
@@ -32,7 +32,7 @@ def _minecraft_version_impl(ctx: "context") -> ["provider"]:
     ctx.actions.dynamic_output(
         dynamic=[version_manifest],
         inputs=[],
-        outputs=[version_json_artifact],
+        outputs=[version_json_artifact.as_output()],
         f=derive_version_json
     )
 
@@ -43,8 +43,8 @@ def _minecraft_version_impl(ctx: "context") -> ["provider"]:
     server_jar_artifact = ctx.actions.declare_output("server.jar")
     server_mappings_artifact = ctx.actions.declare_output("server.txt")
     libraries_dir_artifact = ctx.actions.declare_output("libraries", dir = True)
-    
-    def derive_version_json_contents(ctx: "context", dynamic_artifacts, outputs):
+
+    def derive_version_json_contents(ctx: AnalysisContext, dynamic_artifacts, outputs):
         version_json = dynamic_artifacts[version_json_artifact].read_json()
         ctx.actions.download_file(
             outputs[asset_index_artifact].as_output(),
@@ -86,12 +86,12 @@ def _minecraft_version_impl(ctx: "context") -> ["provider"]:
         dynamic=[version_json_artifact],
         inputs=[],
         outputs=[
-            client_jar_artifact,
-            client_mappings_artifact,
-            server_jar_artifact,
-            server_mappings_artifact,
-            asset_index_artifact,
-            libraries_dir_artifact,
+            client_jar_artifact.as_output(),
+            client_mappings_artifact.as_output(),
+            server_jar_artifact.as_output(),
+            server_mappings_artifact.as_output(),
+            asset_index_artifact.as_output(),
+            libraries_dir_artifact.as_output(),
         ],
         f=derive_version_json_contents,
     )
