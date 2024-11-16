@@ -1,11 +1,11 @@
 load("//minecraft_info.bzl", "MinecraftInfo")
 
-def _assets_impl(ctx: "context"):
+def _assets_impl(ctx: AnalysisContext):
     version = ctx.attrs.minecraft_version
     asset_index_artifact = version[MinecraftInfo].asset_index
 
     assets_dir_artifact = ctx.actions.declare_output("assets", dir=True)
-    def derive_assets(ctx: "context", dynamic_artifacts, outputs):
+    def derive_assets(ctx: AnalysisContext, dynamic_artifacts, outputs):
         asset_index = dynamic_artifacts[asset_index_artifact].read_json()
 
         downloads = {}
@@ -33,7 +33,7 @@ def _assets_impl(ctx: "context"):
     ctx.actions.dynamic_output(
         dynamic=[asset_index_artifact],
         inputs=[],
-        outputs=[assets_dir_artifact],
+        outputs=[assets_dir_artifact.as_output()],
         f=derive_assets,
     )
     return [
